@@ -1,0 +1,18 @@
+{% extends 'navbarRepo.html.twig' %}
+
+{% block title %}
+  Repositories - {{ usuario }}
+{% endblock %}
+
+{% block content %}
+  <h1>Repositorios de {{ usuario }}</h1>
+  {% if directorios is empty %}
+    <span class="fs-4">No tienes directorios.</span>
+  {% else %}
+    <ul>
+      {% for directorio in directorios %}
+        <li><a href="{{ path('repository', { repo: directorio.name }) }}">{{ directorio.name }} <i class="bi bi-folder-symlink-fill ms-1"></i></a></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

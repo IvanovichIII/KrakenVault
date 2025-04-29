@@ -1,0 +1,22 @@
+<ul style="user-select: none;">
+  {% for directorio in directorios %}
+    <li>
+      {% if directorio.type == 'dir' %}
+        <span class="toggle-dir" style="cursor: pointer;">
+          <i class="bi bi-folder-plus me-1"></i>
+          <input type="checkbox" class="form-check-input" data-type="dir" id="file-{{ directorio.name }}" value="{{ directorio.fullPath }}"
+                onclick="event.stopPropagation();">
+          <label class="form-check-label" for="file-{{ directorio.name }}">{{ directorio.name }}</label>
+        </span>
+        <ul class="nested" style="display: none;">
+          {% include 'repository/recursiveRepoDownload.html.twig' with { 'directorios': directorio.content } %}
+        </ul>
+      {% else %}
+        <i class="bi bi-file-earmark-text me-1"></i>
+        <span class="file" data-filepath="{{ directorio.fullPath ?? '' }}" style="cursor: pointer;">
+          <input type="checkbox" class="form-check-input" id="file-{{ directorio.name }}" value="{{ directorio.fullPath }}"><label class="form-check-label" for="file-{{ directorio.name }}">{{ directorio.name }}</label>
+        </span>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>

@@ -1,0 +1,192 @@
+{% extends 'sidebar.html.twig' %}
+
+{% block navbar %}
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-secondary px-4">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPirata" aria-controls="navbarPirata" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+
+      <div class="collapse navbar-collapse" id="navbarPirata">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            {% if app.request.get('_route') == 'repositories' %}
+              <span class="nav-link text-grey fs-5 me-5" style="user-select: none;" href="{{ path('repositories') }}"><i class="bi bi-archive me-1"></i>Mis Repositorios</span>
+            {% else %}
+              <a class="nav-link text-white fs-5 me-5" style="user-select: none;" href="{{ path('repositories') }}"><i class="bi bi-archive me-1"></i>Mis Repositorios</a>
+            {% endif %}
+          </li>
+          <li class="nav-item">
+            {% if app.request.get('_route') == 'repositories' %}
+              <button class="nav-link text-white fs-5 me-5" style="user-select: none;" data-bs-toggle="modal" data-bs-target="#CrearRepositorio"><i class="bi bi-folder-plus me-1"></i>Crear Repositorio</button>
+            {% endif %}
+          </li>
+          <li class="nav-item">
+            {% if app.request.get('_route') == 'repository' %}
+              <button class="nav-link text-white fs-5 me-5" style="user-select: none;" data-bs-toggle="modal" data-bs-target="#SubirArchivos"><i class="bi bi-folder-plus me-1"></i>Subir Archivos o Repositorios</button>
+            {% endif %}
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+  <div class="modal fade" id="CrearRepositorio" tabindex="-1" aria-labelledby="CrearRepositorioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content" id="modalAllId">
+        <div class="modal-header" id="modalHeaderId">
+          <h5 class="modal-title" id="CrearRepositorioLabel"><i class="bi bi-folder-plus me-1"></i>Crear Repositorio</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <form id="formCrear" method="POST" action="{{ path('ftp_create_repo') }}">
+          <div class="modal-body" id="modalBodyId">
+            <label for="titulo">Título:</label>
+            <input type="text" id="titulo" name="titulo" class="form-control" placeholder="Repositorio" />
+            <label for="descripcion">Descripción:</label>
+            <textarea id="descripcion" name="descripcion" class="form-control" style="resize: both; max-width: 100%; min-width: 100%; max-height: 300px;" placeholder="Descripción"></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            <button type="submit" id="guardarModalId" class="btn btn-primary">Crear</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% if app.request.get('_route') == 'repository' %}
+    <div class="modal fade" id="SubirArchivos" tabindex="-1" aria-labelledby="SubirArchivosLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content" id="modalAllId">
+          <div class="modal-header" id="modalHeaderId">
+            <h5 class="modal-title" id="SubirArchivosLabel"><i class="bi bi-folder-plus me-1"></i>Subir Archivos y Directorios</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <form id="upload-form-dir" action="{{ path('ftp_upload') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="repo" value="{{ repo }}" />
+            <div class="modal-body" id="modalBodyId">
+              <input id="fileInput" type="file" name="files[]" multiple="multiple" webkitdirectory directory hidden onchange="mostrarArchivos(this.files)" />
+              <div class="mt-2">
+                <div id="dropZone" class="dropzone border border-primary rounded p-2 mx-4 text-center" 
+                    ondragover="event.preventDefault()" 
+                    ondrop="handleDrop(event)" 
+                    onclick="document.getElementById('fileInput').click()">
+                  <i class="bi bi-cloud-arrow-up fs-1"></i>
+                  <p class="mt-2">Haz clic o arrastra archivos aquí</p>
+                </div>
+                <span class="mx-4">Archivos seleccionados: </span><span id="file-count">0</span>
+              </div>
+              <div id="previewEstructura" class="text-truncate mt-3 overflow-y-auto" style="font-family: monospace; max-height: 42vh;"></div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+              <button type="submit" id="guardarModalId" class="btn btn-primary">Subir</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <script>
+    var datosDir = [];
+    document.getElementById("upload-form-dir").addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (datosDir.length == 0) {
+          alert("No hay archivos para subir.");
+          return;
+      }
+      const formData = new FormData();
+      datosDir.forEach(file => {
+          formData.append('files[]', file);
+          formData.append('file_paths[]', file.webkitRelativePath);
+      });
+      const repoValue = document.querySelector('input[name="repo"]').value;
+      formData.append('repo', repoValue);
+      fetch('/ftp/upload', {
+          method: 'POST',
+          body: formData
+      })
+      .then(response => {
+          if (response.ok) {
+              window.location.href = '/repository/{{ repo }}';
+          } else {
+              alert("Hubo un problema al subir los archivos.");
+          }
+      })
+      .catch(error => {
+          console.error("Error:", error);
+          alert("Hubo un problema al subir los archivos.");
+      });
+    });
+
+    function handleDrop(event) {
+      event.preventDefault();
+      const files = event.dataTransfer.files;
+      mostrarArchivos(files);
+    }
+
+    async function mostrarArchivos(files) {
+      const estructura = {};
+      var i = 0;
+      files = await filtrarArchivos(files);
+      if (!files || files.length === 0) {
+        alert("No se han detectado archivos.");
+        return;
+      }
+      document.getElementById('file-count').textContent = files.length;
+      for (const file of files) {
+          datosDir[i] = file;
+          i++;
+          const partes = file.webkitRelativePath.split('/');
+          let nivelActual = estructura;
+
+          for (let i = 0; i < partes.length; i++) {
+              const parte = partes[i];
+              if (i === partes.length - 1) {
+                  if (!nivelActual.__archivos) nivelActual.__archivos = [];
+                  nivelActual.__archivos.push(parte);
+              } else {
+                  if (!nivelActual[parte]) nivelActual[parte] = {};
+                  nivelActual = nivelActual[parte];
+              }
+          }
+      }
+
+      async function filtrarArchivos(files) {
+        const ignorados = [];
+        const krakignoreFile = Array.from(files).find(f => f.name === '.krakignore');
+        if (krakignoreFile) {
+          const text = await krakignoreFile.text();
+          const reglas = text.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'));
+
+          for (const file of files) {
+            const ignorado = reglas.some(regla => {
+              const pattern = new RegExp(regla.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$');
+              return pattern.test(file.webkitRelativePath || file.name);
+            });
+            if (!ignorado) {
+              ignorados.push(file);
+            }
+          }
+          return ignorados;
+        }
+        return Array.from(files);
+      }
+
+      function imprimirEstructura(nodo, nivel = 0) {
+          let salida = '';
+          const sangria = '&nbsp;'.repeat(nivel * 3);
+
+          for (const key in nodo) {
+              if (key === '__archivos') {
+                  for (const archivo of nodo[key]) {
+                      salida += `<span title='${archivo}'>${sangria}📄 ${archivo}</span><br>`;
+                  }
+              } else {
+                  salida += `<span title='${key}'>${sangria}📁 <strong>${key}/</strong></span><br>`;
+                  salida += imprimirEstructura(nodo[key], nivel + 1);
+              }
+          }
+          return salida;
+      }
+
+      document.getElementById('previewEstructura').innerHTML = imprimirEstructura(estructura);
+    }
+    </script>
+  {% endif %}
+{% endblock %}

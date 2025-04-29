@@ -1,0 +1,127 @@
+<div class="position-relative">
+  <div class="dropdown" style="height: 90px;">
+    <a href="#" class="d-flex align-items-center dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+      <h1><u>{{ repo }}</u></h1>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
+      {% set current_route = app.request.get('_route') %}
+
+      {% if current_route != 'repository' %}
+        <li>
+          <a class="dropdown-item" href="{{ path('repository', { repo: repo }) }}">Repository</a>
+        </li>
+      {% endif %}
+      {% if current_route != 'download' %}
+        <li>
+          <a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#descargar">Download</a>
+        </li>
+      {% endif %}
+      {% if current_route != 'historic' %}
+        <li>
+          <a class="dropdown-item" href="{{ path('historic', { repo: repo }) }}">Historical</a>
+        </li>
+      {% endif %}
+      {% if current_route != 'versionControl' %}
+        <li>
+          <a class="dropdown-item" href="#">Version Control</a>
+        </li>
+      {% endif %}
+      {% if current_route != 'settings' %}
+        <li>
+          <a class="dropdown-item" href="#">Settings</a>
+        </li>
+      {% endif %}
+    </ul>
+  </div>
+</div>
+<div class="modal fade" id="descargar" tabindex="-1" aria-labelledby="descargarLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" id="modalAllId">
+      <div class="modal-header" id="modalHeaderId">
+        <h5 class="modal-title" id="descargarLabel"><i class="bi bi-folder-plus me-1"></i>Descargar Repositorio</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form id="download-form-dir" action="{{ path('ftp_download') }}" method="POST" data-turbo="false">
+        <input type="hidden" name="repo" value="{{ repo }}" />
+        <div class="modal-body" id="modalBodyId">
+          <label for="downloadOption" class="form-label">Método de descarga:</label>
+          <select class="form-select" id="downloadOption" name="downloadOption">
+            <option value="zip" selected>Descargar el repositorio como un archivo ZIP</option>
+            <option value="individual">Descargar archivos individuales</option>
+          </select>
+          <div id="fileList" class="mt-3">
+            {% include 'repository/recursiveRepoDownload.html.twig' with { 'directorios': directorios } %}
+            <input type="hidden" id="selectedFiles" name="selectedFiles" value="">
+          </div>
+          <div id="previewEstructura" class="text-truncate mt-3" style="font-family: monospace;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <button type="submit" id="guardarModalId" class="btn btn-primary"><span id="descText"></span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const options = document.getElementById('downloadOption');
+    const button = document.getElementById('descText');
+    const modal = document.getElementById('descargar');
+    const fileList = document.getElementById('fileList');
+    button.textContent = 'Descargar como ZIP';
+    fileList.style.display = 'none';
+    options.addEventListener('change', () => {
+      const option = options.value;
+      if (option === 'zip') {
+        button.textContent = 'Descargar como ZIP';
+        fileList.style.display = 'none';
+      } else if (option === 'individual') {
+        button.textContent = 'Descargar archivos individuales';
+        fileList.style.display = 'block';
+      }
+    });
+    document.querySelectorAll('input[data-type="dir"]').forEach(function (checkbox) {
+      checkbox.addEventListener("change", function () {
+        const nestedCheckboxes = this.closest('li').querySelectorAll('.nested input[type="checkbox"]');
+        nestedCheckboxes.forEach(function (nestedCheckbox) {
+          nestedCheckbox.checked = checkbox.checked;
+        });
+      });
+    });
+    document.querySelectorAll('input[type="checkbox"][class="form-check-input"]').forEach(function (checkbox) {
+      checkbox.addEventListener("change", function () {
+        if (checkbox.checked) {
+          let parentDir = checkbox.closest('li').parentNode.closest('li');
+          while (parentDir && parentDir.querySelector('input[data-type="dir"]')) {
+            let parentCheckbox = parentDir.querySelector('input[data-type="dir"]');
+            parentCheckbox.checked = true;
+            parentDir = parentDir.parentNode.closest('li');
+          }
+        } else {
+          let parentDir = checkbox.closest('li').parentNode.closest('li');
+          while (parentDir && parentDir.querySelector('input[data-type="dir"]')) {
+            let parentCheckbox = parentDir.querySelector('input[data-type="dir"]');
+            let childCheckboxes = parentDir.querySelectorAll('.nested input[type="checkbox"]:checked');
+            if (childCheckboxes.length === 0) {
+              parentCheckbox.checked = false;
+            }
+            parentDir = parentDir.parentNode.closest('li');
+          }
+        }
+      });
+    });
+    document.querySelectorAll('input[type="checkbox"].form-check-input').forEach(function (checkbox) {
+      checkbox.addEventListener("change", function () {
+        let selectedFiles = [];
+        
+        document.querySelectorAll('input[type="checkbox"].form-check-input:checked').forEach(function (checkedBox) {
+          if (!checkedBox.closest('span').querySelector('.file-link')) {
+            selectedFiles.push(checkedBox.value);
+          }
+        });
+        document.getElementById('selectedFiles').value = selectedFiles.join(',');
+      });
+    });
+  });
+</script>

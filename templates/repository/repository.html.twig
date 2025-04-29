@@ -1,0 +1,92 @@
+{% extends 'navbarRepo.html.twig' %}
+
+{% block title %}
+  {{ repo }} - {{ usuario }}
+{% endblock %}
+
+
+{% block content %}
+<style>
+.file-content{
+  white-space: pre-wrap;
+  border: 1px solid #ccc;
+  padding: 1rem;
+  margin-top: 1rem;
+  font-family: monospace;
+}
+.file-link.active {
+  text-decoration: underline;
+  font-weight: bold;
+  color: #0d6efd;
+}
+.auto-width {
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  overflow: auto;
+}
+</style>
+  <div class="row">
+    <div class="col-md-4 text-truncate">
+      {% include 'repository/dropdown.html.twig' with { 'repo': repo } %}
+      {% if directorios is empty %}
+        <span class="fs-4">{{ repo }} está vacío.</span>
+      {% else %}
+      <div class="overflow-y-auto" style="max-height: 70vh;">
+        {% include 'repository/recursiveRepo.html.twig' with { 'directorios': directorios } %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="col-md-8 border-start" style="display:none; max-height: 85vh;" id="file-box">
+      <div id="file-title"class="file-title mb-3 d-flex align-items-center gap-2">
+         <i class="bi bi-file-earmark-text fs-4 text-primary"></i>
+         <span id="file-name" class="fs-5 fw-bold text-dark"></span>
+      </div>
+      <div id="file-content" class="file-content text-truncate border rounded p-3 bg-light overflow-y-auto" style="white-space: pre-wrap; max-height: 70vh; max-width: 50vw;"></div>
+    </div>
+  </div>
+  <script>
+    //document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.file-link').forEach(el => {
+        el.addEventListener('click', async () => {
+          document.querySelectorAll('.file-link').forEach(f => f.classList.remove('active'));
+          el.classList.add('active');
+          const path = el.dataset.filepath;
+          const isImage = el.dataset.isImage === 'true';
+          const response = await fetch('/file/read?path=' + encodeURIComponent(path));
+          const text = await response.text();
+          const fileBox = document.getElementById('file-box');
+          fileBox.style.display = 'block';
+          const titleBox = document.getElementById('file-name');
+          titleBox.textContent = path.split('/').pop();
+          const contentBox = document.getElementById('file-content');
+          if (isImage) {
+            contentBox.innerHTML = `<img src="/ftp-image/${encodeURIComponent(path)}" style="max-width: 100%; max-height: 500px;">`;
+            fileBox.classList.add('auto-width');
+            fileBox.classList.remove('p-3');
+          } else {
+            const response = await fetch('/file/read?path=' + encodeURIComponent(path));
+            const text = await response.text();
+            contentBox.textContent = text;
+            fileBox.classList.add('p-3');
+            fileBox.classList.remove('auto-width');
+          }
+        });
+      });
+      document.querySelectorAll(".toggle-dir").forEach(function (toggle) {
+      toggle.addEventListener("click", function () {
+        const nested = this.nextElementSibling;
+        if (nested.style.display === "none") {
+          nested.style.display = "block";
+          this.querySelector("i").classList.remove("bi-folder-plus");
+          this.querySelector("i").classList.add("bi-folder-minus");
+        } else {
+          nested.style.display = "none";
+          this.querySelector("i").classList.remove("bi-folder-minus");
+          this.querySelector("i").classList.add("bi-folder-plus");
+        }
+      });
+    });
+    //});
+  </script>
+{% endblock %}

@@ -1,0 +1,48 @@
+parameters:
+    ftp_host: "%env(SERVER_IP)%"
+    ftp_username: 'captain'
+    ftp_password: 'Nantar01'
+    ftp_port: 21
+    ftp_passive: true
+    ftp_ssl: false
+    ftp_root: '/'
+
+services:
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    # makes classes in src/ available to be used as services
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+
+    # Definir el servicio FtpConnectionOptions con parámetros de conexión
+    App\Service\FtpConnectionOptions:
+        class: League\Flysystem\Ftp\FtpConnectionOptions
+        arguments:
+            $host: '%ftp_host%'
+            $username: '%ftp_username%'
+            $password: '%ftp_password%'
+            $port: '%ftp_port%'
+            $passive: '%ftp_passive%'
+            $ssl: '%ftp_ssl%'
+            $root: '%ftp_root%'
+
+    # Definir el servicio FtpAdapter, pasando FtpConnectionOptions como argumento
+    App\Service\FtpAdapter:
+        class: League\Flysystem\Ftp\FtpAdapter
+        arguments:
+            $connectionOptions: '@App\Service\FtpConnectionOptions'
+
+    # Definir el servicio FilesystemOperator basado en FtpAdapter
+    App\Service\FtpService:
+        arguments:
+            $adapter: '@App\Service\FtpAdapter'
+
+    # Definir el controlador para FtpController
+    App\Controller\FtpController:
+        public: true  # Hacer el controlador accesible desde el contenedor
